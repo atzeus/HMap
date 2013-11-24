@@ -1,0 +1,15 @@
+Name:                HMap
+Version:             0.9
+Description:         Fast heterogeneous maps
+License:             BSD3
+Author:              Atze van der Ploeg
+Maintainer:          atzeus@gmail.com
+Build-Type:          Simple
+Cabal-Version:       >=1.2
+Executable DrawProg
+  Main-is:           Main.hs
+  Build-Depends:     base >= 3 && < 5,containers > 0.5
+
+source-repository head
+    type:     git
+    location: https://github.com/atzeus/HMap
