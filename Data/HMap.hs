@@ -41,17 +41,25 @@
 -- > Edsger: salary=4450.0, female=False
 -- > Ada: salary=5000.0, female=True
 --
--- The module differes from "HeteroMap.Map" in the following ways:
+-- This module differs from hackage package @hetero-map@ in the following ways:
 --
 -- * Lookup, insertion and updates are /O(log n)/ when using this module,
---   whereas they are /O(n)/ when using "HeteroMap.Map"
+--   whereas they are /O(n)/ when using @hetero-map@.
 -- 
 -- * With this module we cannot statically ensure that a Heterogenous map 
 --   has a some key (i.e. (!) might throw error, like in "Data.Map").
---   With "HeteroMap.Map" it is possible to statically rule out 
+--   With @hetero-map@ it is possible to statically rule out 
 --   such errors.
 --
 -- * The interface of this module is more similar to "Data.Map"
+--
+-- This module differs from @stable-maps@ in the following ways:
+-- 
+-- * Key can be created safely without using the IO monad.
+--
+-- * The interface is more uniform and implements more of the
+--   "Data.Map" interface.
+--
 --
 -- Since many function names (but not the type name) clash with
 -- "Prelude" names, this module is usually imported @qualified@, e.g.
@@ -59,7 +67,8 @@
 -- >  import Data.HMap (HMap)
 -- >  import qualified Data.HMap as HMap
 --
--- This module uses "Data.Map" as a backend.
+-- This module uses "Data.Map" as a backend. Every function from "Data.Map"
+-- that makes sense in a heterogenous setting has been implemented.
 --
 -- Note that the implementation is /left-biased/ -- the elements of a
 -- first argument are always preferred to the second, for example in
@@ -78,7 +87,8 @@ module Data.HMap(
             -- * Keys
             , Key
             , withKey
-
+            , T
+            , createKey
             -- * Operators
             , (!), (\\)
 
@@ -142,6 +152,8 @@ newtype Key x a = Key Unique
 data HideType where
   HideType :: a -> HideType
 
+
+
 unsafeFromHideType :: HideType -> a
 unsafeFromHideType (HideType x) = unsafeCoerce x
 
@@ -154,6 +166,13 @@ unsafeFromHideType (HideType x) = unsafeCoerce x
 
 withKey :: (forall x. Key x a -> b) -> b
 withKey f = f $ Key $ unsafePerformIO newUnique
+
+-- | The scope of top-level keys.
+data T 
+
+-- | /O(1)/. Create a new top-level key.
+createKey :: IO (Key T a)
+createKey = fmap Key newUnique
 
 {--------------------------------------------------------------------
   Operators

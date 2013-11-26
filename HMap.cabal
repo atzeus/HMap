@@ -1,5 +1,5 @@
 Name:                HMap
-Version:             0.9
+Version:             0.902
 Synopsis:	     Fast heterogeneous maps.
 Description:         Fast heterogeneous maps based on Data.Map.
 License:             BSD3
@@ -11,7 +11,7 @@ Build-Type:          Simple
 Cabal-Version:       >=1.6
 Category:            Data, Data Structures
 Library
-  Build-Depends: base >= 2 && <= 4, containers >= 0.1.0.0
+  Build-Depends: base >= 2 && <= 6, containers >= 0.1.0.0
   Exposed-modules: Data.HMap
   Extensions:	RankNTypes, GADTs, CPP
 
