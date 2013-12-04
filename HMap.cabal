@@ -1,5 +1,5 @@
 Name:                HMap
-Version:             0.91
+Version:             0.912
 Synopsis:	     Fast heterogeneous maps.
 Description:         Fast heterogeneous maps based on Hashmaps.
 License:             BSD3
@@ -9,13 +9,13 @@ Maintainer:          atzeus@gmail.com
 Homepage:            https://github.com/atzeus/HMap
 Build-Type:          Simple
 Cabal-Version:       >=1.6
-Data-files:          README, ChangeLog
+Data-files:          ChangeLog
 Category:            Data, Data Structures
 Tested-With:         GHC==7.6.3
 Library
   Build-Depends: base >= 2 && <= 6, unordered-containers >= 0.2
   Exposed-modules: Data.HMap
-  Extensions:	RankNTypes, GADTs, CPP
+  Extensions:	 RankNTypes, GADTs, CPP, EmptyDataDecls
 
 source-repository head
     type:     git

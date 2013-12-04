@@ -1,4 +1,4 @@
-0.91 : Replaced Data.Map with Hashmap for speed.
+0.912 : Replaced Data.Map with Hashmap for speed.
 
 0.902 : Support for top level scoped keys
 

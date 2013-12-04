@@ -3,8 +3,6 @@
 -- |
 -- Module      :  Data.HMap
 -- Copyright   :  (c) Atze van der Ploeg 2013
---                (c) Daan Leijen 2002
---                (c) Andriy Palamarchuk 2008
 -- License     :  BSD-style
 -- Maintainer  :  atzeus@gmail.org
 -- Stability   :  provisional
@@ -67,7 +65,7 @@
 -- >  import Data.HMap (HMap)
 -- >  import qualified Data.HMap as HMap
 --
--- This module uses "Data.Map" as a backend. Every function from "Data.Map"
+-- This module uses "Data.HashMap.Lazy" as a backend. Every function from "Data.Map"
 -- that makes sense in a heterogenous setting has been implemented.
 --
 -- Note that the implementation is /left-biased/ -- the elements of a
