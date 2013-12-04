@@ -1,0 +1,7 @@
+0.91 : Replaced Data.Map with Hashmap for speed.
+
+0.902 : Support for top level scoped keys
+
+0.901: Improved cabal file
+
+0.9 : Initial version

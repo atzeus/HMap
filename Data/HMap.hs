@@ -1,4 +1,4 @@
-{-# LANGUAGE  RankNTypes, GADTs, CPP #-} 
+{-# LANGUAGE  RankNTypes, GADTs, CPP, EmptyDataDecls #-} 
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.HMap
@@ -76,6 +76,7 @@
 --
 -- Operation comments contain the operation time complexity in
 -- the Big-O notation <http://en.wikipedia.org/wiki/Big_O_notation>.
+--
 -----------------------------------------------------------------------------
 
 
@@ -131,8 +132,10 @@ import Prelude hiding (lookup,null)
 import Unsafe.Coerce
 import Data.Unique
 import System.IO.Unsafe
-import Data.Map(Map)
-import qualified Data.Map as M
+import Data.Hashable
+import Data.HashMap.Lazy(HashMap)
+
+import qualified Data.HashMap.Lazy as M
 import Data.Maybe(fromJust)
 
 
@@ -142,7 +145,10 @@ import Data.Maybe(fromJust)
 --------------------------------------------------------------------}
 -- | The HMap type. It's constructor is not exported for safety.
 
-newtype HMap = HMap (Map Unique HideType) 
+instance Hashable Unique where
+  hashWithSalt n u = n + hashUnique u
+
+newtype HMap = HMap (HashMap Unique HideType) 
 
 {--------------------------------------------------------------------
   Keys
