@@ -1,3 +1,5 @@
+1.0.2 : Small improvements to documentation.
+
 1.0.1 : Added hashable as dependency. Version numbers now not stupid.
 
 0.912 : Replaced Data.Map with Hashmap for speed.

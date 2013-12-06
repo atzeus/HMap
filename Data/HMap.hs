@@ -11,52 +11,90 @@
 -- An efficient implementation of heterogeneous maps.
 -- 
 -- A heterogeneous map can store values of different types. This in contrast
--- to a homogenous map (such as the one in "Data.Map") which can store
+-- to a homogenous map (such as the one in 'Data.Map') which can store
 -- values of a single type.
 --
 --  For example, here we use
 -- a map with 'String' (name), 'Double' (salary) and 'Bool' (female):
 --
 -- > import Data.HMap 
--- >
--- > example name salary female = 
--- >   do putStrLn $ format a
--- >      putStrLn $ format b 
--- >    where a = insert name "Edsger" $ 
--- >              insert salary 4450.0 $ 
--- >              insert female False empty
--- >          b = insert name "Ada"    $ 
--- >              insert salary 5000.0 $ 
--- >              insert female True empty
--- >          format x = x ! name ++ 
--- >                     ": salary=" ++ show (x ! salary) ++ 
--- >                     ", female="  ++ show (x ! female)
 -- > 
--- > main = withKey $ withKey $ withKey example
+-- > -- type can be inferred.
+-- > example ::  Key x String -> Key x1 Double -> Key x2 Bool 
+-- >            -> String
+-- > example name salary female = 
+-- >   format a ++ "\n" ++ format b ++ "\n"
+-- >   where a = insert name "Edsger" $ 
+-- >             insert salary 4450.0 $ 
+-- >             insert female False empty
+-- >         b = insert name "Ada"    $ 
+-- >             insert salary 5000.0 $ 
+-- >             insert female True empty
+-- >         format x = x ! name ++ 
+-- >                    ": salary=" ++ show (x ! salary) ++ 
+-- >                    ", female="  ++ show (x ! female)
+-- >
+-- > keyLocal :: String
+-- > keyLocal = withKey $ withKey $ withKey example
+-- >
+-- > keyGlobal :: IO String
+-- > keyGlobal = 
+-- >   do name   <- createKey
+-- >      salary <- createKey
+-- >      female <- createKey
+-- >      return $ example name salary female
+-- >                     
+-- > main = do print "local"
+-- >           putStr keyLocal
+-- >           print "global"
+-- >           keyGlobal >>= putStr
+-- 
+-- Which gives:
 --
--- The output of this program:
---
+-- > "local"
 -- > Edsger: salary=4450.0, female=False
 -- > Ada: salary=5000.0, female=True
+-- > "global"
+-- > Edsger: salary=4450.0, female=False
+-- > Ada: salary=5000.0, female=True
+-- 
+-- Key types carry two type arguments: the scope of the key and
+--  the the type of things that can be stored at this key, for example @String@ or @Int@.
 --
+-- The scope of the key depends on how it is created: 
+--
+-- * In the @keyLocal@ example, keys are created /locally/ with the 'withKey' function.
+--   The type of the 'withKey' function is @(forall x. Key x a -> b) -> b@, which means it 
+--   assigns a key and passes it to the given function. The key cannot 
+--   escape the function (this would yield a type error). Hence,
+--   we say the key is /scoped/ to the function. The scope type argument of the key is then an existential type.
+-- 
+-- * In the @keyGlobal@ example, keys are created /globally/ with 'createKey' in the IO monad.
+--   This allows to create keys that are not 
+--   not scoped to a single function, but to the whole program. The scope type argument of the key is then
+--   'T'.
+--                       
 -- This module differs from hackage package @hetero-map@ in the following ways:
 --
 -- * Lookup, insertion and updates are /O(log n)/ when using this module,
 --   whereas they are /O(n)/ when using @hetero-map@.
 -- 
 -- * With this module we cannot statically ensure that a Heterogenous map 
---   has a some key (i.e. (!) might throw error, like in "Data.Map").
+--   has a some key (i.e. (!) might throw error, like in 'Data.Map').
 --   With @hetero-map@ it is possible to statically rule out 
 --   such errors.
 --
--- * The interface of this module is more similar to "Data.Map"
+-- * The interface of this module is more similar to  'Data.Map'.
 --
 -- This module differs from @stable-maps@ in the following ways:
 -- 
 -- * Key can be created safely without using the IO monad.
 --
 -- * The interface is more uniform and implements more of the
---   "Data.Map" interface.
+--    'Data.Map' interface.
+-- 
+-- * This module uses a Hashmap as a backend, whereas @stable-maps@ uses @Data.Map@.
+--   Hashmaps are faster, see <http://blog.johantibell.com/2012/03/announcing-unordered-containers-02.html>.
 --
 --
 -- Since many function names (but not the type name) clash with
@@ -65,7 +103,7 @@
 -- >  import Data.HMap (HMap)
 -- >  import qualified Data.HMap as HMap
 --
--- This module uses "Data.HashMap.Lazy" as a backend. Every function from "Data.Map"
+-- This module uses @Data.HashMap.Lazy@ as a backend. Every function from 'Data.Map'
 -- that makes sense in a heterogenous setting has been implemented.
 --
 -- Note that the implementation is /left-biased/ -- the elements of a
@@ -141,17 +179,28 @@ import Data.Maybe(fromJust)
 {--------------------------------------------------------------------
   HMap
 --------------------------------------------------------------------}
--- | The HMap type. It's constructor is not exported for safety.
+
 
 instance Hashable Unique where
   hashWithSalt n u = n + hashUnique u
 
+-- | The type of hetrogenous maps. 
 newtype HMap = HMap (HashMap Unique HideType) 
 
 {--------------------------------------------------------------------
   Keys
 --------------------------------------------------------------------}
-newtype Key x a = Key Unique
+
+-- | The datatype of Keys. 
+--
+--   [x] The scope of this key. This can either be 'T' for top-level keys created with 'createKey' or 
+--       an existential type for keys introduced by 'withKey'.
+-- 
+--   [a] The type of things that can be sorted at this key.
+-- 
+--  For example, @Key T Int@ is a top-level key that can be used to store values
+--  of type @Int@ in a heterogenous map.     
+newtype Key s a = Key Unique
 
 data HideType where
   HideType :: a -> HideType
@@ -393,8 +442,6 @@ unions ts
 -- | /O(n+m)/.
 -- The expression (@'union' t1 t2@) takes the left-biased union of @t1@ and @t2@.
 -- It prefers @t1@ when duplicate keys are encountered.
--- The implementation (from 'Data.Map') uses the efficient /hedge-union/ algorithm.
--- Hedge-union is more efficient on (bigset \``union`\` smallset).
 
 union :: HMap -> HMap -> HMap
 union (HMap l) (HMap r) = HMap (M.union l r)
@@ -408,7 +455,6 @@ union (HMap l) (HMap r) = HMap (M.union l r)
 --------------------------------------------------------------------}
 -- | /O(n+m)/. Difference of two maps.
 -- Return elements of the first map not existing in the second map.
--- The implementation  (from 'Data.Map') uses an efficient /hedge/ algorithm comparable with /hedge-union/.
 difference :: HMap -> HMap -> HMap
 difference (HMap l) (HMap r) = HMap (M.difference l r)
 #if __GLASGOW_HASKELL__ >= 700

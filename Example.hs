@@ -2,9 +2,11 @@
 
 import Data.HMap 
 
+-- type can be inferred.
+example ::  Key x String -> Key x1 Double -> Key x2 Bool 
+            -> String
 example name salary female = 
-  do putStrLn $ format a
-     putStrLn $ format b 
+   format a ++ "\n" ++ format b ++ "\n"
    where a = insert name "Edsger" $ 
              insert salary 4450.0 $ 
              insert female False empty
@@ -15,5 +17,18 @@ example name salary female =
                     ": salary=" ++ show (x ! salary) ++ 
                     ", female="  ++ show (x ! female)
 
-main = withKey $ withKey $ withKey example
+keyLocal :: String
+keyLocal = withKey $ withKey $ withKey example
+
+keyGlobal :: IO String
+keyGlobal = 
+  do name   <- createKey
+     salary <- createKey
+     female <- createKey
+     return $ example name salary female
+                     
+main = do print "local"
+          putStr keyLocal
+          print "global"
+          keyGlobal >>= putStr
   
