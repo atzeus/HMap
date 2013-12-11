@@ -154,7 +154,7 @@ unsafeFromHideType (HideType x) = unsafeCoerce x
 
 withKey :: (forall x. Key x a -> b) -> b
 withKey f = f $ Key $ unsafePerformIO newUnique
-
+{-# NOINLINE withKey #-} 
 {--------------------------------------------------------------------
   Operators
 --------------------------------------------------------------------}
