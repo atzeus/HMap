@@ -218,7 +218,7 @@ unsafeFromHideType (HideType x) = unsafeCoerce x
 -- @withKey f@ twice, that it will get a different key the second time.
 
 withKey :: (forall x. Key x a -> b) -> b
-withKey f = f $ Key $ unsafePerformIO newUnique
+withKey f = unsafePerformIO $ newUnique >>= \x -> return $ f $ Key x
 {-# NOINLINE withKey #-} 
 
 -- | The scope of top-level keys.
