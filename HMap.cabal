@@ -1,5 +1,5 @@
 Name:                HMap
-Version:             1.0.2
+Version:             1.0.3
 Synopsis:	     Fast heterogeneous maps.
 Description:         Fast heterogeneous maps based on Hashmaps.
 License:             BSD3
