@@ -32,7 +32,7 @@ module Data.HKeySet
     -- * Difference and intersection
     , difference
     , intersection
-    --  KeySet-HMap functions
+    -- * KeySet-HMap functions
     , overlap
     , sameKeys
     , removeKeys

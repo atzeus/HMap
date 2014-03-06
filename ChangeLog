@@ -1,3 +1,5 @@
+1.1.2: Fixed small thing in documentation of HKeySet
+
 1.1.1: Fixed build failing..
 
 1.1.0 : Added HKeySet and Untypeable, reorganized the code
