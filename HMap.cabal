@@ -1,7 +1,7 @@
 Name:                HMap
-Version:             1.0.3
-Synopsis:	     Fast heterogeneous maps.
-Description:         Fast heterogeneous maps based on Hashmaps.
+Version:             1.1.1
+Synopsis:	     Fast heterogeneous maps and unconstrained typeable like functionality.
+Description:         Fast heterogeneous maps based on Hashmaps  and type-able like functionality for type that are not typeable.
 License:             BSD3
 License-file:        LICENSE
 Author:              Atze van der Ploeg
@@ -14,7 +14,8 @@ Category:            Data, Data Structures
 Tested-With:         GHC==7.6.3
 Library
   Build-Depends: base >= 2 && <= 6, unordered-containers >= 0.2, hashable >= 1.2
-  Exposed-modules: Data.HMap
+  Exposed-modules: Data.HMap, Data.HKey, Data.Untypeable, Data.HKeySet
+  other-modules:       Data.HKeyPrivate, Data.HideType
   Extensions:	 RankNTypes, GADTs, CPP, EmptyDataDecls
 
 source-repository head

@@ -1,3 +1,9 @@
+1.1.1: Fixed build failing..
+
+1.1.0 : Added HKeySet and Untypeable, reorganized the code
+
+1.0.5 : Added KeyM monad
+
 1.0.3 : Added NOINLINE pragma
 
 1.0.2 : Small improvements to documentation.

@@ -117,15 +117,10 @@
 
 
 
-module Data.HMap(
-             -- * HMap type
-             HMap  
+module Data.HMap 
 
-            -- * Keys
-            , Key
-            , withKey
-            , T
-            , createKey
+ (
+             HMap
             -- * Operators
             , (!), (\\)
 
@@ -162,14 +157,21 @@ module Data.HMap(
 
             -- ** Intersection
             , intersection
-            )
+            -- * Key reexports
+            , module Data.HKey
+            ) 
+
 where
+import qualified Data.HKey 
 import Prelude hiding (lookup,null)
-import Unsafe.Coerce
+import Data.Untypeable
 import Data.Unique
-import System.IO.Unsafe
+import Data.HKeyPrivate
+import Data.HideType
+import Control.Monad
 import Data.Hashable
 import Data.HashMap.Lazy(HashMap)
+
 
 import qualified Data.HashMap.Lazy as M
 import Data.Maybe(fromJust)
@@ -181,52 +183,12 @@ import Data.Maybe(fromJust)
 --------------------------------------------------------------------}
 
 
-instance Hashable Unique where
-  hashWithSalt n u = n + hashUnique u
 
 -- | The type of hetrogenous maps. 
 newtype HMap = HMap (HashMap Unique HideType) 
 
-{--------------------------------------------------------------------
-  Keys
---------------------------------------------------------------------}
-
--- | The datatype of Keys. 
---
---   [x] The scope of this key. This can either be 'T' for top-level keys created with 'createKey' or 
---       an existential type for keys introduced by 'withKey'.
--- 
---   [a] The type of things that can be sorted at this key.
--- 
---  For example, @Key T Int@ is a top-level key that can be used to store values
---  of type @Int@ in a heterogenous map.     
-newtype Key s a = Key Unique
-
-data HideType where
-  HideType :: a -> HideType
 
 
-
-unsafeFromHideType :: HideType -> a
-unsafeFromHideType (HideType x) = unsafeCoerce x
-
--- | /O(1)/. Scopes a key to the given function
--- The key cannot escape the function (because of the existential type).
---
--- The implementation actually *creates* a key, but because the key cannot escape
--- the given function @f@, there is no way to observe that if we run 
--- @withKey f@ twice, that it will get a different key the second time.
-
-withKey :: (forall x. Key x a -> b) -> b
-withKey f = unsafePerformIO $ newUnique >>= \x -> return $ f $ Key x
-{-# NOINLINE withKey #-} 
-
--- | The scope of top-level keys.
-data T 
-
--- | /O(1)/. Create a new top-level key.
-createKey :: IO (Key T a)
-createKey = fmap Key newUnique
 
 {--------------------------------------------------------------------
   Operators
@@ -236,7 +198,7 @@ infixl 9 !,\\ --
 -- | /O(log n)/. Find the value at a key.
 -- Calls 'error' when the element can not be found.
 
-(!) :: HMap -> Key x a -> a
+(!) :: HMap -> HKey x a -> a
 m ! k = find k m
 #if __GLASGOW_HASKELL__ >= 700
 {-# INLINABLE (!) #-}
@@ -271,7 +233,7 @@ size (HMap m) = M.size m
 -- The function will return the corresponding value as @('Just' value)@,
 -- or 'Nothing' if the key isn't in the map.
 
-lookup :: Key x a -> HMap -> Maybe a
+lookup :: HKey x a -> HMap -> Maybe a
 lookup (Key x) (HMap m) = fmap unsafeFromHideType (M.lookup x m)
 #if __GLASGOW_HASKELL__ >= 700
 {-# INLINABLE lookup #-}
@@ -280,7 +242,7 @@ lookup (Key x) (HMap m) = fmap unsafeFromHideType (M.lookup x m)
 #endif
 
 -- | /O(log n)/. Is the key a member of the map? See also 'notMember'.
-member ::  Key x a -> HMap -> Bool
+member ::  HKey x a -> HMap -> Bool
 member (Key x) (HMap m) = M.member x m
  
 #if __GLASGOW_HASKELL__ >= 700
@@ -291,7 +253,7 @@ member (Key x) (HMap m) = M.member x m
 
 -- | /O(log n)/. Is the key not a member of the map? See also 'member'.
 
-notMember :: Key x a -> HMap -> Bool
+notMember :: HKey x a -> HMap -> Bool
 notMember k m = not $ member k m
 #if __GLASGOW_HASKELL__ >= 700
 {-# INLINABLE notMember #-}
@@ -301,7 +263,7 @@ notMember k m = not $ member k m
 
 -- | /O(log n)/. Find the value at a key.
 -- Calls 'error' when the element can not be found.
-find :: Key x a -> HMap -> a
+find :: HKey x a -> HMap -> a
 find x m = fromJust $ lookup x m
 #if __GLASGOW_HASKELL__ >= 700
 {-# INLINABLE find #-}
@@ -313,7 +275,7 @@ find x m = fromJust $ lookup x m
 -- the value at key @k@ or returns default value @def@
 -- when the key is not in the map.
 
-findWithDefault :: a -> Key x a -> HMap -> a
+findWithDefault :: a -> HKey x a -> HMap -> a
 findWithDefault a k m = case lookup k m of
                    Just x -> x
                    Nothing -> a 
@@ -330,9 +292,10 @@ empty = HMap M.empty
 -- | /O(1)/. A map with a single element.
 
 
-singleton :: Key x a -> a -> HMap
+singleton :: HKey x a -> a -> HMap
 singleton (Key k) x = HMap (M.singleton k (HideType x))
 {-# INLINE singleton #-}
+
 
 {--------------------------------------------------------------------
   Insertion
@@ -342,7 +305,7 @@ singleton (Key k) x = HMap (M.singleton k (HideType x))
 -- replaced with the supplied value. 'insert' is equivalent to
 -- @'insertWith' 'const'@.
 
-insert :: Key x a -> a -> HMap -> HMap
+insert :: HKey x a -> a -> HMap -> HMap
 insert (Key k) a (HMap m) = HMap (M.insert k (HideType a) m)
 #if __GLASGOW_HASKELL__ >= 700
 {-# INLINABLE insert #-}
@@ -357,7 +320,7 @@ insert (Key k) a (HMap m) = HMap (M.insert k (HideType a) m)
 -- not exist in the map. If the key does exist, the function will
 -- insert the pair @(key, f new_value old_value)@.
 
-insertWith :: (a -> a -> a) -> Key x a -> a -> HMap -> HMap 
+insertWith :: (a -> a -> a) -> HKey x a -> a -> HMap -> HMap 
 insertWith f k a m = insert k a' m  
   where a' = case lookup k m of
               Just x  -> f a x
@@ -374,7 +337,7 @@ insertWith f k a m = insert k a' m
 -- | /O(log n)/. Delete a key and its value from the map. When the key is not
 -- a member of the map, the original map is returned.
 
-delete :: Key x a -> HMap -> HMap
+delete :: HKey x a -> HMap -> HMap
 delete (Key k) (HMap m) = HMap $ M.delete k m
 #if __GLASGOW_HASKELL__ >= 700
 {-# INLINABLE delete #-}
@@ -386,7 +349,7 @@ delete (Key k) (HMap m) = HMap $ M.delete k m
 -- When the key is not
 -- a member of the map, the original map is returned.
 
-adjust :: (a -> a) -> Key x a -> HMap -> HMap
+adjust :: (a -> a) -> HKey x a -> HMap -> HMap
 adjust f k m = case lookup k m of
        Just x  -> insert k (f x) m
        Nothing -> m
@@ -401,7 +364,7 @@ adjust f k m = case lookup k m of
 -- at @k@ (if it is in the map). If (@f x@) is 'Nothing', the element is
 -- deleted. If it is (@'Just' y@), the key @k@ is bound to the new value @y@.
 
-update :: (a -> Maybe a) -> Key x a -> HMap -> HMap
+update :: (a -> Maybe a) -> HKey x a -> HMap -> HMap
 update f k m = case lookup k m of
        Just x  -> case f x of
                    Just y -> insert k y m
@@ -417,7 +380,7 @@ update f k m = case lookup k m of
 -- 'alter' can be used to insert, delete, or update a value in a 'Map'.
 -- In short : @'lookup' k ('alter' f k m) = f ('lookup' k m)@.
 
-alter :: (Maybe a -> Maybe a) -> Key x a -> HMap -> HMap
+alter :: (Maybe a -> Maybe a) -> HKey x a -> HMap -> HMap
 alter f k m = case f (lookup k m) of
        Just x  -> insert k x m
        Nothing -> delete k m
@@ -473,5 +436,8 @@ intersection (HMap l) (HMap r) = HMap (M.intersection l r)
 #if __GLASGOW_HASKELL__ >= 700
 {-# INLINABLE intersection #-}
 #endif
+
+
+
 
 
