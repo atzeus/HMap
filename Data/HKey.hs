@@ -4,7 +4,9 @@ module Data.HKey(  HKey
             , createKey
             -- * Key Monad
             , KeyM
+            , KeyT
             , getKey
+            , keyTSplit
             , runKeyT) where
 
 import Data.HKeyPrivate

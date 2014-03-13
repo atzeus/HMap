@@ -16,7 +16,9 @@ module Data.HKeyPrivate(
             , T
             , createKey
             , KeyM
+            , KeyT
             , getKey
+            , keyTSplit
             , runKeyT) where
 
 import Unsafe.Coerce
@@ -72,6 +74,7 @@ createKey = fmap Key newUnique
 data GD s m a where
   Lift :: m a -> GD s m a
   GetKey :: GD s m (HKey s a)
+  Split  :: KeyT s m a -> GD s m (m a)
 
 data TermM f a where
   Return :: a -> TermM f a
@@ -111,19 +114,35 @@ getKey = KeyT $ Bind (Prim GetKey) Return
 {-# INLINABLE getKey #-}
 #endif
 
+-- | Split of a keyT computation.
+--
+--  As an analogy, think of a random number generator
+--  some random number generator can be split, from one random number generator
+--  we obtain two distinct random number generator that are unrelated.
+-- 
+--  The KeyT monad gives us access to a name source, this operation allows
+--  us to split the name source. The generated name from both this and 
+--  the split off computation have the same scope, but are otherwise underlated.
+-- 
+--  Notice that the sharing of the same scope is not a problem
+--  because the monad ensures referential transparency.
+--   
+keyTSplit :: KeyT s m a -> KeyT s m (m a)
+keyTSplit m = KeyT $ Bind (Prim (Split m)) Return
+
 instance MonadTrans (KeyT s) where
   lift m = KeyT (Prim (Lift m))
-
-
 
 
 -- | Run a key monad. Existential type makes sure keys cannot escape.
 runKeyT :: forall m a. Monad m => (forall s. KeyT s m a) -> m a
 runKeyT (KeyT m) = loop m where
+  loop :: TermM (GD T m) b -> m b
   loop = interpret bind return  where
-  bind :: Bind (GD T m) a (m a)
+  bind :: Bind (GD T m) x (m x)
   bind (Lift m) c = m >>= loop . c
   bind GetKey  c = loop (c $ unsafePerformIO $ createKey)
+  bind (Split (KeyT m)) c = loop $ c $ loop m
 
 
 
