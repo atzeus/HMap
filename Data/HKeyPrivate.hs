@@ -1,4 +1,4 @@
-{-# LANGUAGE  RankNTypes, GADTs, CPP, EmptyDataDecls #-} 
+{-# LANGUAGE  ScopedTypeVariables,RankNTypes, GADTs, CPP, EmptyDataDecls #-} 
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.HMap
@@ -17,12 +17,14 @@ module Data.HKeyPrivate(
             , createKey
             , KeyM
             , getKey
-            , runKeyM) where
+            , runKeyT) where
 
 import Unsafe.Coerce
 import Data.Unique
 import System.IO.Unsafe
 import Control.Monad
+import Control.Monad.Identity
+import Control.Monad.Trans
 import Data.Hashable
 
 instance Hashable Unique where
@@ -67,36 +69,61 @@ createKey = fmap Key newUnique
   Key Monad
 --------------------------------------------------------------------}
 
+data GD s m a where
+  Lift :: m a -> GD s m a
+  GetKey :: GD s m (HKey s a)
+
+data TermM f a where
+  Return :: a -> TermM f a
+  Bind   :: TermM f a -> (a -> TermM f b) -> TermM f b
+  Prim   :: f a -> TermM f a
+
+instance Monad (TermM f) where
+  return = Return
+  (>>=)  = Bind
+
+type Bind f a v = (forall w. f w -> (w -> TermM f a) -> v)
+
+interpret :: Bind f a v -> (a -> v) -> TermM f a ->  v
+interpret bind ret = int where
+  int (Return a) = ret a
+  int (Bind (Prim x) f) = bind x f
+  int (Bind (Return x) f) = int (f x)
+  int (Bind (Bind p q) r) = int (Bind p (\x -> Bind (q x) r))
 
 
-data GD s a = Done a
-           | forall b. GetKey (HKey s b -> GD s a)
-
--- uses Codensity monad like definition for speed.
 -- | A monad that can be used to create keys
 --   Keys cannot escape the monad, analogous to the ST Monad.
 --   Can be used instead of the 'withKey' function if you
---   need an statically unkown number of keys.
-newtype KeyM s a = KeyM { rk :: forall b. (a -> GD s b) -> GD s b }
+--   need an statically unknown number of keys.
+type KeyM s a = KeyT s Identity a
+newtype KeyT s m a = KeyT { getKT :: TermM (GD s m) a }
 
-instance Monad (KeyM s) where
-  return a = KeyM (\k -> k a)
-  c >>= f  = KeyM (\k -> rk c (\a -> rk (f a) k))
+instance Monad (KeyT s m) where
+  return   = KeyT . Return
+  c >>= f  = KeyT $ getKT c >>= getKT . f
+
 
 -- | Obtain a key in the key monad
-getKey :: KeyM s (HKey s a)
-getKey = KeyM $ \c -> GetKey c
+getKey :: KeyT s m (HKey s a)
+getKey = KeyT $ Bind (Prim GetKey) Return
 #if __GLASGOW_HASKELL__ >= 700
 {-# INLINABLE getKey #-}
 #endif
 
+instance MonadTrans (KeyT s) where
+  lift m = KeyT (Prim (Lift m))
+
+
+
 
 -- | Run a key monad. Existential type makes sure keys cannot escape.
-runKeyM :: (forall s. KeyM s a) -> a
-runKeyM m = loop (rk m Done) where
-  loop (Done a) = a
-  loop (GetKey c) = loop $ unsafePerformIO $ liftM c createKey 
-  {-# NOINLINE loop #-} 
+runKeyT :: forall m a. Monad m => (forall s. KeyT s m a) -> m a
+runKeyT (KeyT m) = loop m where
+  loop = interpret bind return  where
+  bind :: Bind (GD T m) a (m a)
+  bind (Lift m) c = m >>= loop . c
+  bind GetKey  c = loop (c $ unsafePerformIO $ createKey)
 
 
 

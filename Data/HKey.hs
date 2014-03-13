@@ -5,6 +5,6 @@ module Data.HKey(  HKey
             -- * Key Monad
             , KeyM
             , getKey
-            , runKeyM) where
+            , runKeyT) where
 
 import Data.HKeyPrivate
