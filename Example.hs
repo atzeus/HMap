@@ -3,7 +3,7 @@
 import Data.HMap 
 
 -- type can be inferred.
-example ::  Key x String -> Key x1 Double -> Key x2 Bool 
+example :: HKey x String -> HKey x1 Double -> HKey x2 Bool 
             -> String
 example name salary female = 
    format a ++ "\n" ++ format b ++ "\n"
