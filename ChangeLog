@@ -1,3 +1,5 @@
+1.1.6: Better memory performance: An entry into an HMap does not keep the value alive if the key is not alive. After all, if the key is dead, then there is no way to retrieve the value! Also added IO operation purge to remove dead elements.
+
 1.1.5: Added operation to split a KeyT monad. Super trippyness!
 
 1.1.4: Forgot to export KeyT
