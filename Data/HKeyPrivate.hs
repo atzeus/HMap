@@ -28,6 +28,7 @@ import Control.Monad
 import Control.Applicative
 import Control.Monad.Identity
 import Control.Monad.Trans
+import Control.Monad.Fix
 import Data.Hashable
 
 instance Hashable Unique where
@@ -76,6 +77,7 @@ data GD s m a where
   Lift :: m a -> GD s m a
   GetKey :: GD s m (HKey s a)
   Split  :: KeyT s m a -> GD s m (m a)
+  GDFix   :: MonadFix m => (a -> KeyT s m a) -> GD s m a
 
 data TermM f a where
   Return :: a -> TermM f a
@@ -85,6 +87,8 @@ data TermM f a where
 instance Monad (TermM f) where
   return = Return
   (>>=)  = Bind
+
+
 
 type Bind f a v = (forall w. f w -> (w -> TermM f a) -> v)
 
@@ -123,6 +127,9 @@ instance Monad (KeyT s m) where
   return   = KeyT . Return
   c >>= f  = KeyT $ getKT c >>= getKT . f
 
+instance MonadFix m => MonadFix (KeyT s m) where 
+  mfix m = KeyT $ Bind (Prim (GDFix m)) Return
+
 
 
 -- | Obtain a key in the key monad
@@ -155,13 +162,14 @@ instance MonadTrans (KeyT s) where
 -- | Run a key monad. Existential type makes sure keys cannot escape.
 runKeyT :: forall m a. Monad m => (forall s. KeyT s m a) -> m a
 runKeyT (KeyT m) = loop m where
-  loop :: TermM (GD T m) b -> m b
+  loop :: TermM (GD T m) b -> m b	
   loop = interpret bind return  where
   {-# NOINLINE bind #-}
   bind :: Bind (GD T m) x (m x)
   bind (Lift m) c = m >>= loop . c
   bind GetKey  c = unsafePerformIO (liftM (loop . c) createKey)
   bind (Split (KeyT m)) c = loop $ c $ loop m
+  bind (GDFix f) c = mfix (loop . getKT . f) >>= loop . c 
 
 
 

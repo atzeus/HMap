@@ -1,3 +1,5 @@
+1.2.0 : Added MonadFix instance for KeyT
+
 1.1.9 : Added NOINLINE pragma for KeyT
 
 1.1.8 : Added an Applicative instance for KeyT that is more non-strict than using the monad instance.
