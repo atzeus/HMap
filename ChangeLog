@@ -1,3 +1,9 @@
+1.1.9 : Added NOINLINE pragma for KeyT
+
+1.1.8 : Added an Applicative instance for KeyT that is more non-strict than using the monad instance.
+
+1.1.7: Fixed example in docs.
+
 1.1.6: Better memory performance: An entry into an HMap does not keep the value alive if the key is not alive. After all, if the key is dead, then there is no way to retrieve the value! Also added IO operation purge to remove dead elements.
 
 1.1.5: Added operation to split a KeyT monad. Super trippyness!

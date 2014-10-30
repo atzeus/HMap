@@ -25,6 +25,7 @@ import Unsafe.Coerce
 import Data.Unique
 import System.IO.Unsafe
 import Control.Monad
+import Control.Applicative
 import Control.Monad.Identity
 import Control.Monad.Trans
 import Data.Hashable
@@ -90,6 +91,7 @@ type Bind f a v = (forall w. f w -> (w -> TermM f a) -> v)
 interpret :: Bind f a v -> (a -> v) -> TermM f a ->  v
 interpret bind ret = int where
   int (Return a) = ret a
+  int (Prim x)   = bind x return
   int (Bind (Prim x) f) = bind x f
   int (Bind (Return x) f) = int (f x)
   int (Bind (Bind p q) r) = int (Bind p (\x -> Bind (q x) r))
@@ -99,12 +101,28 @@ interpret bind ret = int where
 --   Keys cannot escape the monad, analogous to the ST Monad.
 --   Can be used instead of the 'withKey' function if you
 --   need an statically unknown number of keys.
+-- 
+-- The applicative instance is more non-strict than 
+-- the standard 'ap':
+--
+--  let hang = getKey >> hang
+--  in snd $ runIdentity $ runKeyT $ pure (,) <*> hang <*> (getKey >> return 2)
+-- does not hang, but with 'ap' it does.
+
 type KeyM s a = KeyT s Identity a
 newtype KeyT s m a = KeyT { getKT :: TermM (GD s m) a }
+
+instance Functor (KeyT s m) where
+  fmap f m = m >>= return . f 
+
+instance Monad m => Applicative (KeyT s m) where
+  pure = return
+  f <*> x = do fv <- keyTSplit f; xv <- keyTSplit x; lift (ap fv xv)
 
 instance Monad (KeyT s m) where
   return   = KeyT . Return
   c >>= f  = KeyT $ getKT c >>= getKT . f
+
 
 
 -- | Obtain a key in the key monad
@@ -139,9 +157,10 @@ runKeyT :: forall m a. Monad m => (forall s. KeyT s m a) -> m a
 runKeyT (KeyT m) = loop m where
   loop :: TermM (GD T m) b -> m b
   loop = interpret bind return  where
+  {-# NOINLINE bind #-}
   bind :: Bind (GD T m) x (m x)
   bind (Lift m) c = m >>= loop . c
-  bind GetKey  c = loop (c $ unsafePerformIO $ createKey)
+  bind GetKey  c = unsafePerformIO (liftM (loop . c) createKey)
   bind (Split (KeyT m)) c = loop $ c $ loop m
 
 
