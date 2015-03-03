@@ -17,6 +17,9 @@ module Data.HKeyPrivate(
             , createKey
             , KeyM
             , KeyT
+            , Key
+            , runKey
+            , newKey
             , getKey
             , keyTSplit
             , runKeyT) where
@@ -136,8 +139,11 @@ instance MonadFix m => MonadFix (KeyT s m) where
   mfix m = KeyT $ Bind (Prim (GDFix m)) Return
 
 
-
 -- | Obtain a key in the key monad
+newKey :: KeyT s m (HKey s a)
+newKey = getKey
+
+-- | Obtain a key in the key monad, alias for newKey
 getKey :: KeyT s m (HKey s a)
 getKey = KeyT $ Bind (Prim GetKey) Return
 #if __GLASGOW_HASKELL__ >= 700

@@ -1,5 +1,5 @@
 Name:                HMap
-Version:             1.2.1
+Version:             1.2.3
 Synopsis:	     Fast heterogeneous maps and unconstrained typeable like functionality.
 Description:         Fast heterogeneous maps based on Hashmaps and type-able like functionality for type that are not typeable.
 License:             BSD3

@@ -166,6 +166,8 @@ module Data.HMap
             , intersection
             -- * Key reexports
             , module Data.HKey
+            -- * Garbage collection
+            ,purge
             ) 
 
 where

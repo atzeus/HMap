@@ -1,4 +1,8 @@
-1.2.1: Added runKey utility function
+1.2.3: Fixing exports
+
+1.2.2: Added runKey utility function
+
+1.2.1 : Fixed: now exports purge
 
 1.2.0 : Added MonadFix instance for KeyT
 

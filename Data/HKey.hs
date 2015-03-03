@@ -5,6 +5,9 @@ module Data.HKey(  HKey
             -- * Key Monad
             , KeyM
             , KeyT
+            , Key 
+            , runKey
+            , newKey
             , getKey
             , keyTSplit
             , runKeyT) where
