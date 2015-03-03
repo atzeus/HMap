@@ -88,7 +88,12 @@ instance Monad (TermM f) where
   return = Return
   (>>=)  = Bind
 
+instance Functor (TermM f) where
+  fmap  = liftM
 
+instance Applicative (TermM f) where
+  pure = return
+  (<*>) = ap 
 
 type Bind f a v = (forall w. f w -> (w -> TermM f a) -> v)
 
@@ -158,6 +163,10 @@ keyTSplit m = KeyT $ Bind (Prim (Split m)) Return
 instance MonadTrans (KeyT s) where
   lift m = KeyT (Prim (Lift m))
 
+type Key s = KeyT s Identity
+
+runKey :: (forall s. Key s a) -> a 
+runKey m = runIdentity (runKeyT m)
 
 -- | Run a key monad. Existential type makes sure keys cannot escape.
 runKeyT :: forall m a. Monad m => (forall s. KeyT s m a) -> m a
