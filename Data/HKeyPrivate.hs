@@ -1,4 +1,4 @@
-{-# LANGUAGE  ScopedTypeVariables,RankNTypes, GADTs, CPP, EmptyDataDecls #-} 
+{-# LANGUAGE  ScopedTypeVariables,RankNTypes, GADTs, CPP, EmptyDataDecls #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.HMap
@@ -7,10 +7,10 @@
 -- Maintainer  :  atzeus@gmail.org
 -- Stability   :  provisional
 -- Portability :  portable
--- 
+--
 -- A HKey is a key that can be used in 'HMap','HKeySet' or 'Untypeable'
 -- it carries the type of thing it points to in its own type.
-module Data.HKeyPrivate( 
+module Data.HKeyPrivate(
               HKey(..)
             , withKey
             , T
@@ -42,30 +42,30 @@ instance Hashable Unique where
   Keys
 --------------------------------------------------------------------}
 
--- | The datatype of Keys. 
+-- | The datatype of Keys.
 --
---   [x] The scope of this key. This can either be 'T' for top-level keys created with 'createKey' or 
+--   [x] The scope of this key. This can either be 'T' for top-level keys created with 'createKey' or
 --       an existential type for keys introduced by 'withKey' (or with the Key monad 'KeyM').
--- 
+--
 --   [a] The type of things that can be sorted at this key.
--- 
+--
 --  For example, @Key T Int@ is a top-level key that can be used to store values
---  of type @Int@ in a heterogenous map.     
+--  of type @Int@ in a heterogenous map.
 newtype HKey s a = Key Unique
 
 -- | /O(1)/. Scopes a key to the given function
 -- The key cannot escape the function (because of the existential type).
 --
 -- The implementation actually *creates* a key, but because the key cannot escape
--- the given function @f@, there is no way to observe that if we run 
+-- the given function @f@, there is no way to observe that if we run
 -- @withKey f@ twice, that it will get a different key the second time.
 
 withKey :: (forall x. HKey x a -> b) -> b
-withKey f = unsafePerformIO $ liftM f createKey 
-{-# NOINLINE withKey #-} 
+withKey f = unsafePerformIO $ liftM f createKey
+{-# NOINLINE withKey #-}
 
 -- | The scope of top-level keys.
-data T 
+data T
 
 -- | /O(1)/. Create a new top-level key.
 createKey :: IO (HKey T a)
@@ -96,7 +96,7 @@ instance Functor (TermM f) where
 
 instance Applicative (TermM f) where
   pure = return
-  (<*>) = ap 
+  (<*>) = ap
 
 type Bind f a v = (forall w. f w -> (w -> TermM f a) -> v)
 
@@ -113,8 +113,8 @@ interpret bind ret = int where
 --   Keys cannot escape the monad, analogous to the ST Monad.
 --   Can be used instead of the 'withKey' function if you
 --   need an statically unknown number of keys.
--- 
--- The applicative instance is more non-strict than 
+--
+-- The applicative instance is more non-strict than
 -- the standard 'ap':
 --
 --  let hang = getKey >> hang
@@ -124,18 +124,18 @@ interpret bind ret = int where
 type KeyM s a = KeyT s Identity a
 newtype KeyT s m a = KeyT { getKT :: TermM (GD s m) a }
 
-instance Functor (KeyT s m) where
-  fmap f m = m >>= return . f 
+instance Monad m => Functor (KeyT s m) where
+  fmap f m = m >>= return . f
 
 instance Monad m => Applicative (KeyT s m) where
   pure = return
   f <*> x = do fv <- keyTSplit f; xv <- keyTSplit x; lift (ap fv xv)
 
-instance Monad (KeyT s m) where
+instance Monad m => Monad (KeyT s m) where
   return   = KeyT . Return
   c >>= f  = KeyT $ getKT c >>= getKT . f
 
-instance MonadFix m => MonadFix (KeyT s m) where 
+instance MonadFix m => MonadFix (KeyT s m) where
   mfix m = KeyT $ Bind (Prim (GDFix m)) Return
 
 
@@ -155,14 +155,14 @@ getKey = KeyT $ Bind (Prim GetKey) Return
 --  As an analogy, think of a random number generator
 --  some random number generator can be split, from one random number generator
 --  we obtain two distinct random number generator that are unrelated.
--- 
+--
 --  The KeyT monad gives us access to a name source, this operation allows
---  us to split the name source. The generated name from both this and 
+--  us to split the name source. The generated name from both this and
 --  the split off computation have the same scope, but are otherwise underlated.
--- 
+--
 --  Notice that the sharing of the same scope is not a problem
 --  because the monad ensures referential transparency.
---   
+--
 keyTSplit :: KeyT s m a -> KeyT s m (m a)
 keyTSplit m = KeyT $ Bind (Prim (Split m)) Return
 
@@ -171,20 +171,20 @@ instance MonadTrans (KeyT s) where
 
 type Key s = KeyT s Identity
 
-runKey :: (forall s. Key s a) -> a 
+runKey :: (forall s. Key s a) -> a
 runKey m = runIdentity (runKeyT m)
 
 -- | Run a key monad. Existential type makes sure keys cannot escape.
 runKeyT :: forall m a. Monad m => (forall s. KeyT s m a) -> m a
 runKeyT (KeyT m) = loop m where
-  loop :: TermM (GD T m) b -> m b	
+  loop :: TermM (GD T m) b -> m b
   loop = interpret bind return  where
   {-# NOINLINE bind #-}
   bind :: Bind (GD T m) x (m x)
   bind (Lift m) c = m >>= loop . c
   bind GetKey  c = unsafePerformIO (liftM (loop . c) createKey)
   bind (Split (KeyT m)) c = loop $ c $ loop m
-  bind (GDFix f) c = mfix (loop . getKT . f) >>= loop . c 
+  bind (GDFix f) c = mfix (loop . getKT . f) >>= loop . c
 
 
 

@@ -1,4 +1,4 @@
-{-# LANGUAGE   CPP #-} 
+{-# LANGUAGE   CPP #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.HKeySet
@@ -8,7 +8,7 @@
 -- Stability   :  provisional
 -- Portability :  portable
 --
--- A set of 'HKey's 
+-- A set of 'HKey's
 module Data.HKeySet
 
  (
@@ -47,8 +47,8 @@ import Data.HMap(HMap)
 import qualified Data.HMap as S
 import qualified Data.List as List
 import Prelude hiding (null)
--- | The type of hetrogenous key sets. 
-newtype HKeySet = HKeySet HMap 
+-- | The type of hetrogenous key sets.
+newtype HKeySet = HKeySet HMap
 
 
 -- | /O(1)/ Construct an empty key set.
@@ -72,6 +72,7 @@ union (HKeySet s1) (HKeySet s2) = HKeySet (s1 `S.union` s2)
 {-# INLINE union #-}
 
 -- | Construct a key set containing all elements from a list of key sets.
+unions :: Foldable f => f HKeySet -> HKeySet
 unions = List.foldl' union empty
 {-# INLINE unions #-}
 
@@ -94,7 +95,7 @@ member x (HKeySet s) = x `S.member` s
 #endif
 
 -- | /O(min(n,W))/ Add the specified value to this set.
-insert :: HKey x a -> HKeySet  -> HKeySet 
+insert :: HKey x a -> HKeySet  -> HKeySet
 insert x (HKeySet s) = HKeySet (S.insert x undefined s)
 #if __GLASGOW_HASKELL__ >= 700
 {-# INLINABLE insert #-}
