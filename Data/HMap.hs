@@ -366,6 +366,16 @@ delete (Key k) (HMap m) = HMap $ M.delete k m
 {-# INLINE delete #-}
 #endif
 
+-- | /O(log n)/. Delete a value from the map using Unique instead of HKey
+deleteUnique :: Unique -> HMap -> HMap
+deleteUnique u (HMap m) = HMap $ M.delete u m
+#if __GLASGOW_HASKELL__ >= 700
+{-# INLINABLE deleteUnique #-}
+#else
+{-# INLINE deleteUnique #-}
+#endif
+
+
 -- | /O(log n)/. Update a value at a specific key with the result of the provided function.
 -- When the key is not
 -- a member of the map, the original map is returned.

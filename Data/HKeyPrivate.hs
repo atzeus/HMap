@@ -15,6 +15,7 @@ module Data.HKeyPrivate(
             , withKey
             , T
             , createKey
+            , unique
             , KeyM
             , KeyT
             , Key
@@ -71,6 +72,8 @@ data T
 createKey :: IO (HKey T a)
 createKey = fmap Key newUnique
 
+unique :: HKey t a -> Unique
+unique (Key u) = u
 
 {--------------------------------------------------------------------
   Key Monad
@@ -185,7 +188,3 @@ runKeyT (KeyT m) = loop m where
   bind GetKey  c = unsafePerformIO (liftM (loop . c) createKey)
   bind (Split (KeyT m)) c = loop $ c $ loop m
   bind (GDFix f) c = mfix (loop . getKT . f) >>= loop . c
-
-
-
-
