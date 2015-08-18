@@ -1,2 +1,4 @@
 dist
 *.sw[a-z]
+.cabal-sandbox
+cabal.sandbox.config
