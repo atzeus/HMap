@@ -105,9 +105,6 @@
 -- the value alive if the key is not alive. After all, if the key
 -- is dead, then there is no way to retrieve the value!
 --
--- Hence, a HMap can have elements which can never be accessed
--- again. Use the IO operation 'purge' to remove these.
---
 -- Since many function names (but not the type name) clash with
 -- "Prelude" names, this module is usually imported @qualified@, e.g.
 --
@@ -171,7 +168,6 @@ module Data.HMap
             -- * Key reexports
             , module Data.HKey
             -- * Garbage collection
-            ,purge
             )
 
 where
@@ -190,7 +186,6 @@ import           Prelude           hiding (lookup, null)
 import qualified Data.HashMap.Lazy as M
 import           Data.Maybe        (fromJust, isJust)
 import           System.IO.Unsafe
-import           System.Mem.Weak
 
 {--------------------------------------------------------------------
   HMap
@@ -199,7 +194,7 @@ import           System.Mem.Weak
 
 
 -- | The type of hetrogenous maps.
-newtype HMap = HMap (HashMap Unique (Weak HideType)) deriving Typeable
+newtype HMap = HMap (HashMap Unique HideType) deriving Typeable
 
 instance Default HMap where def = empty
 
@@ -248,10 +243,9 @@ size (HMap m) = M.size m
 -- or 'Nothing' if the key isn't in the map.
 
 lookup :: HKey x a -> HMap -> Maybe a
-lookup (Key k) (HMap m) =  fmap getVal (M.lookup k m) where
+lookup (Key k) (HMap m) = getVal (M.lookup k m) where
   -- we know it is alive, how else did we get the key?
-  getVal v = (keepAlive k unsafeFromHideType) -- keep key alive till unsafeFromHideType
-             (unsafePerformIO (liftM fromJust (deRefWeak v)))
+  getVal = fmap (keepAlive k unsafeFromHideType)-- keep key alive till unsafeFromHideType
 
   -- this function keeps the key k alive until computing whnf of application of f to x
   keepAlive :: a -> (b -> c) -> (b -> c)
@@ -327,16 +321,8 @@ singleton k x = insert k x empty
 -- replaced with the supplied value. 'insert' is equivalent to
 -- @'insertWith' 'const'@.
 insert :: HKey s a -> a -> HMap -> HMap
-insert (Key k) a (HMap m) = let v = unsafeMKWeak k (HideType a)
+insert (Key k) a (HMap m) = let v = HideType a
                             in v `seq` HMap (M.insert k v m)
-
-{- NOINLINE unsafeMKWeak -}
-unsafeMKWeak k a = unsafePerformIO $ mkWeak k a Nothing
-#if __GLASGOW_HASKELL__ >= 700
-{-# INLINABLE insert #-}
-#else
-{-# INLINE insert #-}
-#endif
 
 
 -- | /O(log n)/. Insert with a function, combining new value and old value.
@@ -461,21 +447,3 @@ intersection (HMap l) (HMap r) = HMap (M.intersection l r)
 #if __GLASGOW_HASKELL__ >= 700
 {-# INLINABLE intersection #-}
 #endif
-
-{--------------------------------------------------------------------
-  Garbage collection.
---------------------------------------------------------------------}
--- | /O(n)/. Remove dead values from map.
---
--- An entry into an HMap does not keep the value alive
--- if the key is not alive. After all, if the key
--- is dead, then there is no way to retrieve the value!
---
--- Hence, a HMap can have elements which can never be accessed
--- again. This operation purges such elements from the given
--- map. Notice that this does change the size of the map
--- and is hence in the IO monad.
-
-purge :: HMap -> IO HMap
-purge (HMap m) = liftM (HMap . M.fromList) $ filterM isAlive (M.toList m)
-  where isAlive (k,v) = liftM isJust $ deRefWeak v
