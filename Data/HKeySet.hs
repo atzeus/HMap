@@ -1,4 +1,4 @@
-{-# LANGUAGE   CPP #-}
+{-# LANGUAGE CPP #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.HKeySet
@@ -41,12 +41,12 @@ module Data.HKeySet
 
 
 
-import Data.Unique
-import Data.HKey
-import Data.HMap(HMap)
-import qualified Data.HMap as S
-import qualified Data.List as List
-import Prelude hiding (null)
+import           Data.HKey
+import           Data.HMap   (HMap)
+import qualified Data.HMap   as S
+import qualified Data.List   as List
+import           Data.Unique
+import           Prelude     hiding (null)
 -- | The type of hetrogenous key sets.
 newtype HKeySet = HKeySet HMap
 
@@ -72,7 +72,9 @@ union (HKeySet s1) (HKeySet s2) = HKeySet (s1 `S.union` s2)
 {-# INLINE union #-}
 
 -- | Construct a key set containing all elements from a list of key sets.
+#if __GLASGOW_HASKELL__ >= 710
 unions :: Foldable f => f HKeySet -> HKeySet
+#endif
 unions = List.foldl' union empty
 {-# INLINE unions #-}
 
@@ -139,7 +141,3 @@ sameKeys h (HKeySet s) =  S.null (h `S.difference` s)
 -- | /O(n)/. Remove the keys from the keyset from the map.
 removeKeys :: HMap -> HKeySet -> HMap
 removeKeys h (HKeySet s) = h `S.difference` s
-
-
-
-
