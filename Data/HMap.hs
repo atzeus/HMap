@@ -150,6 +150,7 @@ module Data.HMap
 
             -- ** Delete\/Update
             , delete
+            , deleteUnique
             , adjust
             , update
             , alter
