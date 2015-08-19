@@ -1,4 +1,8 @@
-{-# LANGUAGE DeriveDataTypeable, RankNTypes, GADTs, CPP, EmptyDataDecls #-}
+{-# LANGUAGE CPP                #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE EmptyDataDecls     #-}
+{-# LANGUAGE GADTs              #-}
+{-# LANGUAGE RankNTypes         #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.HMap
@@ -9,7 +13,7 @@
 -- Portability :  portable
 --
 -- An efficient implementation of heterogeneous maps.
--- 
+--
 -- A heterogeneous map can store values of different types. This in contrast
 -- to a homogenous map (such as the one in 'Data.Map') which can store
 -- values of a single type.
@@ -17,38 +21,38 @@
 --  For example, here we use
 -- a map with 'String' (name), 'Double' (salary) and 'Bool' (female):
 --
--- > import Data.HMap 
--- > 
+-- > import Data.HMap
+-- >
 -- > -- type can be inferred.
--- > example :: HKey x String -> HKey x1 Double -> HKey x2 Bool 
+-- > example :: HKey x String -> HKey x1 Double -> HKey x2 Bool
 -- >            -> String
--- > example name salary female = 
+-- > example name salary female =
 -- >   format a ++ "\n" ++ format b ++ "\n"
--- >   where a = insert name "Edsger" $ 
--- >             insert salary 4450.0 $ 
+-- >   where a = insert name "Edsger" $
+-- >             insert salary 4450.0 $
 -- >             insert female False empty
--- >         b = insert name "Ada"    $ 
--- >             insert salary 5000.0 $ 
+-- >         b = insert name "Ada"    $
+-- >             insert salary 5000.0 $
 -- >             insert female True empty
--- >         format x = x ! name ++ 
--- >                    ": salary=" ++ show (x ! salary) ++ 
+-- >         format x = x ! name ++
+-- >                    ": salary=" ++ show (x ! salary) ++
 -- >                    ", female="  ++ show (x ! female)
 -- >
 -- > keyLocal :: String
 -- > keyLocal = withKey $ withKey $ withKey example
 -- >
 -- > keyGlobal :: IO String
--- > keyGlobal = 
+-- > keyGlobal =
 -- >   do name   <- createKey
 -- >      salary <- createKey
 -- >      female <- createKey
 -- >      return $ example name salary female
--- >                     
+-- >
 -- > main = do print "local"
 -- >           putStr keyLocal
 -- >           print "global"
 -- >           keyGlobal >>= putStr
--- 
+--
 -- Which gives:
 --
 -- > "local"
@@ -57,51 +61,51 @@
 -- > "global"
 -- > Edsger: salary=4450.0, female=False
 -- > Ada: salary=5000.0, female=True
--- 
+--
 -- Key types carry two type arguments: the scope of the key and
 --  the the type of things that can be stored at this key, for example @String@ or @Int@.
 --
--- The scope of the key depends on how it is created: 
+-- The scope of the key depends on how it is created:
 --
 -- * In the @keyLocal@ example, keys are created /locally/ with the 'withKey' function.
---   The type of the 'withKey' function is @(forall x. Key x a -> b) -> b@, which means it 
---   assigns a key and passes it to the given function. The key cannot 
+--   The type of the 'withKey' function is @(forall x. Key x a -> b) -> b@, which means it
+--   assigns a key and passes it to the given function. The key cannot
 --   escape the function (this would yield a type error). Hence,
 --   we say the key is /scoped/ to the function. The scope type argument of the key is then an existential type.
--- 
+--
 -- * In the @keyGlobal@ example, keys are created /globally/ with 'createKey' in the IO monad.
---   This allows to create keys that are not 
+--   This allows to create keys that are not
 --   not scoped to a single function, but to the whole program. The scope type argument of the key is then
 --   'T'.
---                       
+--
 -- This module differs from hackage package @hetero-map@ in the following ways:
 --
 -- * Lookup, insertion and updates are /O(log n)/ when using this module,
 --   whereas they are /O(n)/ when using @hetero-map@.
--- 
--- * With this module we cannot statically ensure that a Heterogenous map 
+--
+-- * With this module we cannot statically ensure that a Heterogenous map
 --   has a some key (i.e. (!) might throw error, like in 'Data.Map').
---   With @hetero-map@ it is possible to statically rule out 
+--   With @hetero-map@ it is possible to statically rule out
 --   such errors.
 --
 -- * The interface of this module is more similar to  'Data.Map'.
 --
 -- This module differs from @stable-maps@ in the following ways:
--- 
+--
 -- * Key can be created safely without using the IO monad.
 --
 -- * The interface is more uniform and implements more of the
 --    'Data.Map' interface.
--- 
+--
 -- * This module uses a Hashmap as a backend, whereas @stable-maps@ uses @Data.Map@.
 --   Hashmaps are faster, see <http://blog.johantibell.com/2012/03/announcing-unordered-containers-02.html>.
 --
--- Another difference to both packages is that HMap has better memory performance 
+-- Another difference to both packages is that HMap has better memory performance
 -- in the following way: An entry into an HMap does not keep
 -- the value alive if the key is not alive. After all, if the key
 -- is dead, then there is no way to retrieve the value!
 --
--- Hence, a HMap can have elements which can never be accessed 
+-- Hence, a HMap can have elements which can never be accessed
 -- again. Use the IO operation 'purge' to remove these.
 --
 -- Since many function names (but not the type name) clash with
@@ -124,7 +128,7 @@
 
 
 
-module Data.HMap 
+module Data.HMap
 
  (
              HMap
@@ -168,25 +172,25 @@ module Data.HMap
             , module Data.HKey
             -- * Garbage collection
             ,purge
-            ) 
+            )
 
 where
-import qualified Data.HKey 
-import Prelude hiding (lookup,null)
-import Data.Default
-import Data.Untypeable
-import Data.Unique
-import Data.HKeyPrivate
-import Data.HideType
-import Control.Monad
-import Data.Hashable
-import Data.HashMap.Lazy(HashMap)
-import Data.Typeable(Typeable)
+import           Control.Monad
+import           Data.Default
+import           Data.Hashable
+import           Data.HashMap.Lazy (HashMap)
+import           Data.HideType
+import qualified Data.HKey
+import           Data.HKeyPrivate
+import           Data.Typeable     (Typeable)
+import           Data.Unique
+import           Data.Untypeable
+import           Prelude           hiding (lookup, null)
 
 import qualified Data.HashMap.Lazy as M
-import Data.Maybe(fromJust,isJust)
-import System.Mem.Weak
-import System.IO.Unsafe
+import           Data.Maybe        (fromJust, isJust)
+import           System.IO.Unsafe
+import           System.Mem.Weak
 
 {--------------------------------------------------------------------
   HMap
@@ -194,7 +198,7 @@ import System.IO.Unsafe
 
 
 
--- | The type of hetrogenous maps. 
+-- | The type of hetrogenous maps.
 newtype HMap = HMap (HashMap Unique (Weak HideType)) deriving Typeable
 
 instance Default HMap where def = empty
@@ -246,13 +250,13 @@ size (HMap m) = M.size m
 lookup :: HKey x a -> HMap -> Maybe a
 lookup (Key k) (HMap m) =  fmap getVal (M.lookup k m) where
   -- we know it is alive, how else did we get the key?
-  getVal v = (keepAlive k unsafeFromHideType) -- keep key alive till unsafeFromHideType 
+  getVal v = (keepAlive k unsafeFromHideType) -- keep key alive till unsafeFromHideType
              (unsafePerformIO (liftM fromJust (deRefWeak v)))
 
   -- this function keeps the key k alive until computing whnf of application of f to x
   keepAlive :: a -> (b -> c) -> (b -> c)
   keepAlive k f x = k `seq` (f x)
-  {-# NOINLINE keepAlive #-}  
+  {-# NOINLINE keepAlive #-}
 #if __GLASGOW_HASKELL__ >= 700
 {-# INLINABLE lookup #-}
 #else
@@ -262,7 +266,7 @@ lookup (Key k) (HMap m) =  fmap getVal (M.lookup k m) where
 -- | /O(log n)/. Is the key a member of the map? See also 'notMember'.
 member ::  HKey x a -> HMap -> Bool
 member (Key x) (HMap m) = M.member x m
- 
+
 #if __GLASGOW_HASKELL__ >= 700
 {-# INLINABLE member #-}
 #else
@@ -296,7 +300,7 @@ find x m = fromJust $ lookup x m
 findWithDefault :: a -> HKey x a -> HMap -> a
 findWithDefault a k m = case lookup k m of
                    Just x -> x
-                   Nothing -> a 
+                   Nothing -> a
 
 {--------------------------------------------------------------------
   Construction
@@ -324,7 +328,7 @@ singleton k x = insert k x empty
 -- @'insertWith' 'const'@.
 insert :: HKey s a -> a -> HMap -> HMap
 insert (Key k) a (HMap m) = let v = unsafeMKWeak k (HideType a)
-                            in v `seq` HMap (M.insert k v m) 
+                            in v `seq` HMap (M.insert k v m)
 
 {- NOINLINE unsafeMKWeak -}
 unsafeMKWeak k a = unsafePerformIO $ mkWeak k a Nothing
@@ -341,8 +345,8 @@ unsafeMKWeak k a = unsafePerformIO $ mkWeak k a Nothing
 -- not exist in the map. If the key does exist, the function will
 -- insert the pair @(key, f new_value old_value)@.
 
-insertWith :: (a -> a -> a) -> HKey x a -> a -> HMap -> HMap 
-insertWith f k a m = insert k a' m  
+insertWith :: (a -> a -> a) -> HKey x a -> a -> HMap -> HMap
+insertWith f k a m = insert k a' m
   where a' = case lookup k m of
               Just x  -> f a x
               Nothing ->  a
@@ -463,17 +467,15 @@ intersection (HMap l) (HMap r) = HMap (M.intersection l r)
 --------------------------------------------------------------------}
 -- | /O(n)/. Remove dead values from map.
 --
--- An entry into an HMap does not keep the value alive 
+-- An entry into an HMap does not keep the value alive
 -- if the key is not alive. After all, if the key
 -- is dead, then there is no way to retrieve the value!
 --
--- Hence, a HMap can have elements which can never be accessed 
+-- Hence, a HMap can have elements which can never be accessed
 -- again. This operation purges such elements from the given
 -- map. Notice that this does change the size of the map
--- and is hence in the IO monad. 
+-- and is hence in the IO monad.
 
 purge :: HMap -> IO HMap
-purge (HMap m) = liftM (HMap . M.fromList) $ filterM isAlive (M.toList m) 
+purge (HMap m) = liftM (HMap . M.fromList) $ filterM isAlive (M.toList m)
   where isAlive (k,v) = liftM isJust $ deRefWeak v
-
-
