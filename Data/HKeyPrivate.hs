@@ -35,8 +35,10 @@ import Control.Monad.Trans
 import Control.Monad.Fix
 import Data.Hashable
 
+#if !(MIN_VERSION_hashable(1,2,4))
 instance Hashable Unique where
   hashWithSalt n u = n + hashUnique u
+#endif
 
 
 {--------------------------------------------------------------------
