@@ -47,7 +47,7 @@ instance Hashable Unique where
 
 -- | The datatype of Keys.
 --
---   [x] The scope of this key. This can either be 'T' for top-level keys created with 'createKey' or
+--   [s] The scope of this key. This can either be 'T' for top-level keys created with 'createKey' or
 --       an existential type for keys introduced by 'withKey' (or with the Key monad 'KeyM').
 --
 --   [a] The type of things that can be sorted at this key.
